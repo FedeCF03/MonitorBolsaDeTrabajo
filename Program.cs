@@ -30,7 +30,6 @@ public class Program
         
         var config = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile($"appsettings.Production.json", optional: true)
             .AddEnvironmentVariables()  // Para leer variables de GitHub Secrets
             .Build();
