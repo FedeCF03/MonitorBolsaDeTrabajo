@@ -10,84 +10,71 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: ⬇️ Checkout código
+      uses: actions/checkout@v4
     
-    - name: Setup .NET
+    - name: 🏗️ Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '10.x'
+        dotnet-version: '8.x'
     
-    - name: Verificar Secrets
-      run: |
-        echo "🔍 DEBUG - Mostrando variables:"
-        echo "SMTP_SERVER: ${{ secrets.SMTP_SERVER }}"
-        echo "SMTP_PORT: '${{ secrets.SMTP_PORT }}'"
-        echo "SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}"
-        echo "RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}"
-        echo "🔢 El puerto es número? (debería ser 587):"
-        if [[ "${{ secrets.SMTP_PORT }}" =~ ^[0-9]+$ ]]; then
-          echo "✅ SMTP_PORT es un número válido: ${{ secrets.SMTP_PORT }}"
-        else
-          echo "❌ ERROR: SMTP_PORT no es un número: '${{ secrets.SMTP_PORT }}'"
-          echo "💡 Ve a Settings → Secrets y cambia SMTP_PORT a '587'"
-          exit 1
-        fi
-    
-    - name: Compilar
+    - name: 📦 Compilar proyecto
       run: |
         dotnet restore
         dotnet build --configuration Release --no-restore
     
-    - name: Crear appsettings.json CON VALORES DIRECTOS
+    - name: ⚙️ Crear appsettings.json SIMPLE
       run: |
-        # Instalar jq si no está disponible
-        if ! command -v jq &> /dev/null; then
-          sudo apt-get update && sudo apt-get install -y jq
-        fi
-
-        # Crear el archivo JSON usando jq para manejar valores correctamente
-        jq -n \
-          --arg sender_email "${{ secrets.SENDER_EMAIL }}" \
-          --arg sender_password "${{ secrets.SENDER_PASSWORD }}" \
-          --arg recipient_email "${{ secrets.RECIPIENT_EMAIL }}" \
-          --arg smtp_port "${{ secrets.SMTP_PORT }}" \
-
-          '{
-            EmailSettings: {
-              SmtpServer: "smtp.gmail.com",
-              SmtpPort: ($smtp_port|tonumber),
-              SenderEmail: $sender_email,
-              SenderPassword: $sender_password,
-              RecipientEmail: $recipient_email,
-              SenderName: "Monitor Bolsa UNLP"
-            },
-            ScrapingSettings: {
-              BaseUrl: "https://bolsa.info.unlp.edu.ar/ver_ofertas",
-              StorageFilePath: "ofertas.json"
-            }
-          }' > appsettings.json
-
-        echo "✅ appsettings.json creado"
-        echo "📄 Contenido:"
-        cat appsettings.json | sed 's/".*Password.*": ".*",/"SenderPassword": "***",/'
+        # Método SIMPLE - crear línea por línea
+        echo '{' > appsettings.json
+        echo '  "EmailSettings": {' >> appsettings.json
+        echo '    "SmtpServer": "smtp.gmail.com",' >> appsettings.json
+        echo '    "SmtpPort": 587,' >> appsettings.json
+        echo '    "SenderEmail": "'"${{ secrets.SENDER_EMAIL }}"'",' >> appsettings.json
+        echo '    "SenderPassword": "'"${{ secrets.SENDER_PASSWORD }}"'",' >> appsettings.json
+        echo '    "RecipientEmail": "'"${{ secrets.RECIPIENT_EMAIL }}"'",' >> appsettings.json
+        echo '    "SenderName": "Monitor Bolsa UNLP"' >> appsettings.json
+        echo '  },' >> appsettings.json
+        echo '  "ScrapingSettings": {' >> appsettings.json
+        echo '    "BaseUrl": "https://bolsa.info.unlp.edu.ar/ver_ofertas",' >> appsettings.json
+        echo '    "StorageFilePath": "ofertas.json"' >> appsettings.json
+        echo '  }' >> appsettings.json
+        echo '}' >> appsettings.json
+        
+        echo "✅ appsettings.json creado exitosamente"
+        echo "📄 Contenido (seguro):"
+        # Mostrar sin password
+        sed 's/"SenderPassword": ".*"/"SenderPassword": "***"/' appsettings.json
     
-    - name: Ejecutar monitor
+    - name: 🔍 Verificar JSON
       run: |
-        echo "🚀 Iniciando ejecución..."
+        echo "🔍 Validando JSON..."
+        if python3 -c "import json; json.load(open('appsettings.json')); print('✅ JSON válido')"; then
+          echo "✅ JSON es válido"
+        else
+          echo "❌ JSON inválido"
+          echo "📄 Contenido crudo:"
+          cat -A appsettings.json
+          exit 1
+        fi
+    
+    - name: 🚀 Ejecutar monitor
+      run: |
+        echo "🕐 Iniciando ejecución..."
         dotnet run --configuration Release --no-build -- --run-once
         echo "🎉 Proceso completado"
     
-    - name: Guardar cambios
+    - name: 💾 Guardar ofertas actualizadas
       if: success()
       run: |
-        git config --local user.email "github-actions@users.noreply.github.com"
-        git config --local user.name "GitHub Actions"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
         
-        if [ -f "ofertas.json" ] && git diff --quiet ofertas.json; then
-          echo "📄 Sin cambios en ofertas.json"
+        if git diff --quiet ofertas.json; then
+          echo "📄 No hay cambios en ofertas.json"
         else
           echo "📄 Guardando cambios..."
           git add ofertas.json
-          git commit -m "📢 Actualizar ofertas - $(date +'%Y-%m-%d %H:%M UTC')"
+          git commit -m "📢 Actualizar ofertas - $(date +'%Y-%m-%d %H:%M')"
           git push
         fi
