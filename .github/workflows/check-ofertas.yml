@@ -45,7 +45,7 @@ jobs:
         {
           "EmailSettings": {
             "SmtpServer": "smtp.gmail.com",
-            "SmtpPort": 587,
+            "SmtpPort": "587",
             "SenderEmail": "${{ secrets.SENDER_EMAIL }}",
             "SenderPassword": "${{ secrets.SENDER_PASSWORD }}",
             "RecipientEmail": "${{ secrets.RECIPIENT_EMAIL }}",
