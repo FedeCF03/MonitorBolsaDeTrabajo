@@ -36,15 +36,11 @@ namespace MonitorBolsaDeTrabajo.Services
         
         message.Body = bodyBuilder.ToMessageBody();
         
-        if (!int.TryParse(_configuration["EmailSettings:SmtpPort"], out int smtpPort))
-        {
-            throw new InvalidOperationException($"Invalid SMTP port: {_configuration["EmailSettings:SmtpPort"]}");
-        }
-
+        
         using var client = new SmtpClient();
         await client.ConnectAsync(
             _configuration["EmailSettings:SmtpServer"],
-            smtpPort,
+            587,
             MailKit.Security.SecureSocketOptions.StartTls);
         
         await client.AuthenticateAsync(
