@@ -50,10 +50,12 @@ jobs:
           --arg sender_email "${{ secrets.SENDER_EMAIL }}" \
           --arg sender_password "${{ secrets.SENDER_PASSWORD }}" \
           --arg recipient_email "${{ secrets.RECIPIENT_EMAIL }}" \
+          --arg smtp_port "${{ secrets.SMTP_PORT }}" \
+
           '{
             EmailSettings: {
               SmtpServer: "smtp.gmail.com",
-              SmtpPort: 587,
+              SmtpPort: ($smtp_port|tonumber),
               SenderEmail: $sender_email,
               SenderPassword: $sender_password,
               RecipientEmail: $recipient_email,
