@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MonitorBolsaDeTrabajo.Services;
 using MonitorBolsaDeTrabajo.Workers;
 using MonitorBolsaDeTrabajo.Models;
+using System.IO;
 public class Program
 {
     public static async Task Main(string[] args)
@@ -28,6 +29,7 @@ public class Program
         Console.WriteLine($"Iniciando verificación: {DateTime.Now}");
         
         var config = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile($"appsettings.Production.json", optional: true)
             .AddEnvironmentVariables()  // Para leer variables de GitHub Secrets
