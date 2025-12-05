@@ -40,24 +40,31 @@ jobs:
     
     - name: Crear appsettings.json CON VALORES DIRECTOS
       run: |
-        # Crear JSON con los valores REALES
-        cat > appsettings.json << 'EOF'
-        {
-          "EmailSettings": {
-            "SmtpServer": "smtp.gmail.com",
-            "SmtpPort": "587",
-            "SenderEmail": "${{ secrets.SENDER_EMAIL }}",
-            "SenderPassword": "${{ secrets.SENDER_PASSWORD }}",
-            "RecipientEmail": "${{ secrets.RECIPIENT_EMAIL }}",
-            "SenderName": "Monitor Bolsa UNLP"
-          },
-          "ScrapingSettings": {
-            "BaseUrl": "https://bolsa.info.unlp.edu.ar/ver_ofertas",
-            "StorageFilePath": "ofertas.json"
-          }
-        }
-        EOF
-        
+        # Instalar jq si no está disponible
+        if ! command -v jq &> /dev/null; then
+          sudo apt-get update && sudo apt-get install -y jq
+        fi
+
+        # Crear el archivo JSON usando jq para manejar valores correctamente
+        jq -n \
+          --arg sender_email "${{ secrets.SENDER_EMAIL }}" \
+          --arg sender_password "${{ secrets.SENDER_PASSWORD }}" \
+          --arg recipient_email "${{ secrets.RECIPIENT_EMAIL }}" \
+          '{
+            EmailSettings: {
+              SmtpServer: "smtp.gmail.com",
+              SmtpPort: "587",
+              SenderEmail: $sender_email,
+              SenderPassword: $sender_password,
+              RecipientEmail: $recipient_email,
+              SenderName: "Monitor Bolsa UNLP"
+            },
+            ScrapingSettings: {
+              BaseUrl: "https://bolsa.info.unlp.edu.ar/ver_ofertas",
+              StorageFilePath: "ofertas.json"
+            }
+          }' > appsettings.json
+
         echo "✅ appsettings.json creado"
         echo "📄 Contenido:"
         cat appsettings.json | sed 's/".*Password.*": ".*",/"SenderPassword": "***",/'
