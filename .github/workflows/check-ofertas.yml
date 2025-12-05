@@ -2,7 +2,7 @@ name: Monitor Bolsa UNLP
 
 on:
   schedule:
-    - cron: '0 9 * * *'  # 9 AM UTC diario
+    - cron: '0 9 * * *'  # 9 AM UTC = 6 AM Argentina
   workflow_dispatch:
 
 jobs:
@@ -10,28 +10,42 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: ⬇️ Checkout código
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: 🏗️ Setup .NET 10
+    - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '10.0'
+        dotnet-version: '10.x'
     
-    - name: 📦 Restaurar dependencias
-      run: dotnet restore
-    
-    - name: 🛠️ Compilar
-      run: dotnet build --configuration Release --no-restore
-    
-    - name: ⚙️ Crear appsettings.json en la raíz
+    - name: Verificar Secrets
       run: |
-        # Crear el archivo en la raíz del proyecto
+        echo "🔍 DEBUG - Mostrando variables:"
+        echo "SMTP_SERVER: ${{ secrets.SMTP_SERVER }}"
+        echo "SMTP_PORT: '${{ secrets.SMTP_PORT }}'"
+        echo "SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}"
+        echo "RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}"
+        echo "🔢 El puerto es número? (debería ser 587):"
+        if [[ "${{ secrets.SMTP_PORT }}" =~ ^[0-9]+$ ]]; then
+          echo "✅ SMTP_PORT es un número válido: ${{ secrets.SMTP_PORT }}"
+        else
+          echo "❌ ERROR: SMTP_PORT no es un número: '${{ secrets.SMTP_PORT }}'"
+          echo "💡 Ve a Settings → Secrets y cambia SMTP_PORT a '587'"
+          exit 1
+        fi
+    
+    - name: Compilar
+      run: |
+        dotnet restore
+        dotnet build --configuration Release --no-restore
+    
+    - name: Crear appsettings.json CON VALORES DIRECTOS
+      run: |
+        # Crear JSON con los valores REALES
         cat > appsettings.json << 'EOF'
         {
           "EmailSettings": {
-            "SmtpServer": "${{ secrets.SMTP_SERVER }}",
-            "SmtpPort": ${{ secrets.SMTP_PORT }},
+            "SmtpServer": "smtp.gmail.com",
+            "SmtpPort": 587,
             "SenderEmail": "${{ secrets.SENDER_EMAIL }}",
             "SenderPassword": "${{ secrets.SENDER_PASSWORD }}",
             "RecipientEmail": "${{ secrets.RECIPIENT_EMAIL }}",
@@ -44,45 +58,27 @@ jobs:
         }
         EOF
         
-        echo "✅ appsettings.json creado en: $(pwd)/appsettings.json"
-        echo "📄 Contenido (sin password):"
+        echo "✅ appsettings.json creado"
+        echo "📄 Contenido:"
         cat appsettings.json | sed 's/".*Password.*": ".*",/"SenderPassword": "***",/'
     
-    - name: 📁 Listar archivos (debug)
+    - name: Ejecutar monitor
       run: |
-        echo "📍 Directorio actual: $(pwd)"
-        echo "📁 Archivos en raíz:"
-        ls -la
-        
-        echo "📁 Archivos en bin/Release:"
-        ls -la bin/Release/ || echo "No existe bin/Release"
-        
-        echo "📄 Verificar appsettings.json:"
-        if [ -f "appsettings.json" ]; then
-          echo "✅ appsettings.json existe"
-          echo "Ruta absoluta: $(realpath appsettings.json)"
-        else
-          echo "❌ appsettings.json NO existe"
-        fi
-    
-    - name: 🔍 Ejecutar monitor
-      run: |
-        echo "🕐 Iniciando ejecución..."
-        # IMPORTANTE: Ejecutar DESDE LA RAÍZ del proyecto
+        echo "🚀 Iniciando ejecución..."
         dotnet run --configuration Release --no-build -- --run-once
-        echo "✅ Finalizado"
+        echo "🎉 Proceso completado"
     
-    - name: 💾 Guardar cambios
+    - name: Guardar cambios
       if: success()
       run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
+        git config --local user.email "github-actions@users.noreply.github.com"
+        git config --local user.name "GitHub Actions"
         
-        if git diff --quiet ofertas.json; then
-          echo "📄 No hay cambios en ofertas.json"
+        if [ -f "ofertas.json" ] && git diff --quiet ofertas.json; then
+          echo "📄 Sin cambios en ofertas.json"
         else
-          echo "📄 Cambios detectados - Commit y Push"
+          echo "📄 Guardando cambios..."
           git add ofertas.json
-          git commit -m "📢 Actualizar ofertas - $(date +'%Y-%m-%d %H:%M')"
+          git commit -m "📢 Actualizar ofertas - $(date +'%Y-%m-%d %H:%M UTC')"
           git push
         fi
