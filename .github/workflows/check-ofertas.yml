@@ -13,7 +13,7 @@ jobs:
     - name: ⬇️ Checkout código
       uses: actions/checkout@v4
     
-    - name: 🏗️ Setup .NET 8
+    - name: 🏗️ Setup .NET 10
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '10.0'
@@ -31,7 +31,7 @@ jobs:
         {
           "EmailSettings": {
             "SmtpServer": "${{ secrets.SMTP_SERVER }}",
-            "SmtpPort": "${{ secrets.SMTP_PORT }}",
+            "SmtpPort": ${{ secrets.SMTP_PORT }},
             "SenderEmail": "${{ secrets.SENDER_EMAIL }}",
             "SenderPassword": "${{ secrets.SENDER_PASSWORD }}",
             "RecipientEmail": "${{ secrets.RECIPIENT_EMAIL }}",
