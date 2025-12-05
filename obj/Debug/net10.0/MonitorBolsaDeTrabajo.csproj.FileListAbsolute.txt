@@ -50,3 +50,4 @@
 /home/cfederico/Downloads/MonitorBolsaDeTrabajo/obj/Debug/net10.0/MonitorBolsaDeTrabajo.pdb
 /home/cfederico/Downloads/MonitorBolsaDeTrabajo/obj/Debug/net10.0/MonitorBolsaDeTrabajo.genruntimeconfig.cache
 /home/cfederico/Downloads/MonitorBolsaDeTrabajo/obj/Debug/net10.0/ref/MonitorBolsaDeTrabajo.dll
+/home/cfederico/Downloads/MonitorBolsaDeTrabajo/obj/Debug/net10.0/MonitorBolsaDeTrabajo.sourcelink.json

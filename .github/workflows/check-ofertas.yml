@@ -1,0 +1,33 @@
+name: Monitor Bolsa UNLP Simple
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 9 AM UTC diario
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.x'
+    
+    - name: Configurar variables
+      run: |
+        # Variables reemplazadas automáticamente
+        sed -i "s|__SMTP_SERVER__|${{ secrets.SMTP_SERVER }}|g" appsettings.Production.json
+        sed -i "s|__SMTP_PORT__|${{ secrets.SMTP_PORT }}|g" appsettings.Production.json
+        sed -i "s|__SENDER_EMAIL__|${{ secrets.SENDER_EMAIL }}|g" appsettings.Production.json
+        sed -i "s|__SENDER_PASSWORD__|${{ secrets.SENDER_PASSWORD }}|g" appsettings.Production.json
+        sed -i "s|__RECIPIENT_EMAIL__|${{ secrets.RECIPIENT_EMAIL }}|g" appsettings.Production.json
+    
+    - name: Ejecutar monitor
+      env:
+        DOTNET_ENVIRONMENT: Production
+      run: |
+        dotnet run --configuration Release -- --run-once

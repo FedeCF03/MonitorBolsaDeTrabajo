@@ -19,7 +19,9 @@ namespace MonitorBolsaDeTrabajo.Services
     public WebScraperService(IConfiguration configuration)
     {
         _configuration = configuration;
-        _storagePath = _configuration["ScrapingSettings:StorageFilePath"];
+        _storagePath = Path.Combine(
+            Directory.GetCurrentDirectory(), 
+            _configuration["ScrapingSettings:StorageFilePath"] ?? "ofertas.json");
         _baseUrl = _configuration["ScrapingSettings:BaseUrl"];
     }
 
@@ -97,7 +99,6 @@ namespace MonitorBolsaDeTrabajo.Services
         var nuevasOfertas = ofertasActuales
             .Where(o => !ofertasGuardadas.Any(og => og.Equals(o)))
             .ToList();
-        
         // Guardar todas las ofertas actuales
         await SaveOfertasAsync(ofertasActuales);
         
