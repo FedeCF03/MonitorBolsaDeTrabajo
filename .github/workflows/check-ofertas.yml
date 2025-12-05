@@ -53,7 +53,7 @@ jobs:
           '{
             EmailSettings: {
               SmtpServer: "smtp.gmail.com",
-              SmtpPort: "587",
+              SmtpPort: 587,
               SenderEmail: $sender_email,
               SenderPassword: $sender_password,
               RecipientEmail: $recipient_email,
