@@ -1,4 +1,4 @@
-name: Monitor Bolsa UNLP Simple
+name: Monitor Bolsa UNLP
 
 on:
   schedule:
@@ -10,24 +10,79 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: ⬇️ Checkout código
+      uses: actions/checkout@v4
     
-    - name: Setup .NET
+    - name: 🏗️ Setup .NET 8
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.x'
+        dotnet-version: '10.0'
     
-    - name: Configurar variables
-      run: |
-        # Variables reemplazadas automáticamente
-        sed -i "s|__SMTP_SERVER__|${{ secrets.SMTP_SERVER }}|g" appsettings.Production.json
-        sed -i "s|__SMTP_PORT__|${{ secrets.SMTP_PORT }}|g" appsettings.Production.json
-        sed -i "s|__SENDER_EMAIL__|${{ secrets.SENDER_EMAIL }}|g" appsettings.Production.json
-        sed -i "s|__SENDER_PASSWORD__|${{ secrets.SENDER_PASSWORD }}|g" appsettings.Production.json
-        sed -i "s|__RECIPIENT_EMAIL__|${{ secrets.RECIPIENT_EMAIL }}|g" appsettings.Production.json
+    - name: 📦 Restaurar dependencias
+      run: dotnet restore
     
-    - name: Ejecutar monitor
-      env:
-        DOTNET_ENVIRONMENT: Production
+    - name: 🛠️ Compilar
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: ⚙️ Crear appsettings.json en la raíz
       run: |
-        dotnet run --configuration Release -- --run-once
+        # Crear el archivo en la raíz del proyecto
+        cat > appsettings.json << 'EOF'
+        {
+          "EmailSettings": {
+            "SmtpServer": "${{ secrets.SMTP_SERVER }}",
+            "SmtpPort": "${{ secrets.SMTP_PORT }}",
+            "SenderEmail": "${{ secrets.SENDER_EMAIL }}",
+            "SenderPassword": "${{ secrets.SENDER_PASSWORD }}",
+            "RecipientEmail": "${{ secrets.RECIPIENT_EMAIL }}",
+            "SenderName": "Monitor Bolsa UNLP"
+          },
+          "ScrapingSettings": {
+            "BaseUrl": "https://bolsa.info.unlp.edu.ar/ver_ofertas",
+            "StorageFilePath": "ofertas.json"
+          }
+        }
+        EOF
+        
+        echo "✅ appsettings.json creado en: $(pwd)/appsettings.json"
+        echo "📄 Contenido (sin password):"
+        cat appsettings.json | sed 's/".*Password.*": ".*",/"SenderPassword": "***",/'
+    
+    - name: 📁 Listar archivos (debug)
+      run: |
+        echo "📍 Directorio actual: $(pwd)"
+        echo "📁 Archivos en raíz:"
+        ls -la
+        
+        echo "📁 Archivos en bin/Release:"
+        ls -la bin/Release/ || echo "No existe bin/Release"
+        
+        echo "📄 Verificar appsettings.json:"
+        if [ -f "appsettings.json" ]; then
+          echo "✅ appsettings.json existe"
+          echo "Ruta absoluta: $(realpath appsettings.json)"
+        else
+          echo "❌ appsettings.json NO existe"
+        fi
+    
+    - name: 🔍 Ejecutar monitor
+      run: |
+        echo "🕐 Iniciando ejecución..."
+        # IMPORTANTE: Ejecutar DESDE LA RAÍZ del proyecto
+        dotnet run --configuration Release --no-build -- --run-once
+        echo "✅ Finalizado"
+    
+    - name: 💾 Guardar cambios
+      if: success()
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        if git diff --quiet ofertas.json; then
+          echo "📄 No hay cambios en ofertas.json"
+        else
+          echo "📄 Cambios detectados - Commit y Push"
+          git add ofertas.json
+          git commit -m "📢 Actualizar ofertas - $(date +'%Y-%m-%d %H:%M')"
+          git push
+        fi
